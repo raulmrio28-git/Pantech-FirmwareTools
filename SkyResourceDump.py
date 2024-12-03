@@ -39,23 +39,26 @@ for idx in range(items):
 		en_str = fd.read(english_size).decode('euc-kr')
 		csv_writer.writerow([kr_str, en_str])
 	else:
-		blk_off, size, cmp_size = struct.unpack("<LLL", fd.read(12))
+		blk_off, size, size2 = struct.unpack("<LLL", fd.read(12))
 		off_t = fd.tell()
-		print(hex(blk_off*blk_size), size, cmp_size)
 		fd.seek(blk_off*blk_size)
 		data = fd.read(size)
 		if type == 1 or type == 2:
-			if not os.path.exists(f"{out_path}/Image"):
-				os.makedirs(f"{out_path}/Image", exist_ok=True)
+			if type == 1:
+				img_out_path = f"{out_path}/Image"
+			else:
+				img_out_path = f"{out_path}/MultiImage"
+			if not os.path.exists(img_out_path):
+				os.makedirs(img_out_path, exist_ok=True)
 			if data[0:2] == b"AF" and size >= 10:
 				dimg = SkyCFLib.AF(data)
 				for c, im in enumerate(dimg):
-					if not os.path.exists(f"{out_path}/Image/{idx}"):
-						os.makedirs(f"{out_path}/Image/{idx}", exist_ok=True)
-					im.save(f"{out_path}/Image/{idx}/{c}.png")
+					if not os.path.exists(f"{img_out_path}/{idx}"):
+						os.makedirs(f"{img_out_path}/{idx}", exist_ok=True)
+					im.save(f"{img_out_path}/{idx}/{c}.png")
 			elif data[0:2] == b"CF" and size >= 14:
 				dimg = SkyCFLib.decodeFrame2(data)
-				dimg.save(f"{out_path}/Image/{idx}.png")
+				dimg.save(f"{img_out_path}/{idx}.png")
 		elif type == 3:
 			if not os.path.exists(f"{out_path}/Sound"):
 				os.makedirs(f"{out_path}/Sound", exist_ok=True)

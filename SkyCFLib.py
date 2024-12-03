@@ -28,74 +28,49 @@ def decodeFrame2(data: typing.Union[bytes, bytearray, str]):
     if type(data) == str:
         data = open(data, "rb").read()
     assert data[:2] == b"CF", "Not a valid Pantech CF Image."
-    width, height, bpp, bits, ctype, size, pfSize = struct.unpack("<HHBBBHH", data[0x2:0xd])
-    #if fr != 1: raise Exception("Unimplemented feature: fr > 1")
+    width, height, bpp, bits, ctype, size = struct.unpack("<HHBBBH", data[0x2:0xb])
+    offset = 0xb
+    
+    block_encoding = bool(ctype & 0x1)
+    pal_comp = bool(ctype >> 1 & 0x1)
+    map_comp = bool(ctype >> 2 & 0x1)
 
-    if ctype == 0x1:
+    if block_encoding == True:
         temp = Image.new("RGB", (width, height))
         
-        offset = 0xb
-
         palettes = []
-        for _ in range(size):
-            palettes.append(data[offset:offset+8])
-            offset += 8
-                
-        for y in range(0, height, 2):
-            for x in range(0, width, 2):                
-                pixel = Image.frombytes("RGB", (2,2), palettes[min(struct.unpack("<H", data[offset:offset+2])[0], size-1)], "raw", "BGR;16", 0, 1) 
-                temp.paste(pixel, (x,y))
-                offset += 2                
+        
+        if pal_comp == True:
+            pal_comp_size = struct.unpack("<H", data[offset:offset+2])[0]
+            pal_data = decompress(data[offset+2:offset+2+pal_comp_size], size*8)
+            offset += 2+pal_comp_size
+        else:
+            pal_data = data[offset:offset+(size*8)]
+            offset += size*8
             
-        return temp
-
-    elif ctype == 0x3:
-        temp = Image.new("RGB", (width, height))
-                            
-        pTemp = decompress(data[0xd:0xd+pfSize], size*8)
-        dData = data[0xd+pfSize:]
-
-        palettes = []
-        for p in range(size):            
-            palettes.append(pTemp[(p*8):(p*8)+8])        
-
+        if map_comp == True:
+            map_comp_size = struct.unpack("<H", data[offset:offset+2])[0]
+            map_data = decompress(data[offset+2:offset+2+map_comp_size], (width*height))
+            offset += 2+map_comp_size
+        else:
+            map_data = data[offset:offset+(width*height)]
+            offset += (width*height)
+        
         offset = 0
+
+        for p in range(size):            
+            palettes.append(pal_data[(p*8):(p*8)+8])  
 
         for y in range(0, height, 2):
             for x in range(0, width, 2):                
-                pixel = Image.frombytes("RGB", (2,2), palettes[min(struct.unpack("<H", dData[offset:offset+2])[0], size-1)], "raw", "BGR;16", 0, 1) 
+                pixel = Image.frombytes("RGB", (2,2), palettes[min(struct.unpack("<H", map_data[offset:offset+2])[0], size-1)], "raw", "BGR;16", 0, 1) 
                 temp.paste(pixel, (x,y))
                 offset += 2
-
+                
         return temp
-
-    elif ctype == 0x7:
-        temp = Image.new("RGB", (width, height))
-                            
-        pTemp = decompress(data[0xd:0xd+pfSize], size*8)
-        dSize = struct.unpack("<H", data[0xd+pfSize:0xd+pfSize+2])[0]        
-        dData = decompress(data[0xd+pfSize+2:0xd+pfSize+2+dSize], (width*height))
-
-        palettes = []
-        for p in range(size):            
-            palettes.append(pTemp[(p*8):(p*8)+8])        
-
-        offset = 0
-
-        for y in range(0, height, 2):
-            for x in range(0, width, 2):                
-                pixel = Image.frombytes("RGB", (2,2), palettes[min(struct.unpack("<H", dData[offset:offset+2])[0], size-1)], "raw", "BGR;16", 0, 1) 
-                temp.paste(pixel, (x,y))
-                offset += 2
-
-        return temp
-
-    elif ctype == 0x0:
-        temp = decompress(data[0xb:0xb+size+0x80000], (width*height)*4)
-        return Image.frombytes("RGBA", (width, height), temp, "raw", "BGRA", 0, 1) if bits == 0x3 else Image.frombytes("RGB", (width, height), temp, "raw", "BGR;16", 0, 1)
-
     else:
-        raise Exception(f"Unknown CF type: {ctype}")
+        data = decompress(data[offset:offset+size+0x80000], (width*height)*4)
+        return Image.frombytes("RGBA", (width, height), data, "raw", "BGRA", 0, 1) if bits == 0x3 else Image.frombytes("RGB", (width, height), data, "raw", "BGR;16", 0, 1)
     
 def decodeFrame1(data: typing.Union[bytes, bytearray, str]):
     if type(data) == str:
