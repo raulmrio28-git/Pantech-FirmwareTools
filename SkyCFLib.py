@@ -49,6 +49,26 @@ def decodeFrame2(data: typing.Union[bytes, bytearray, str]):
             
         return temp
 
+    elif ctype == 0x3:
+        temp = Image.new("RGB", (width, height))
+                            
+        pTemp = decompress(data[0xd:0xd+pfSize], size*8)
+        dData = data[0xd+pfSize:]
+
+        palettes = []
+        for p in range(size):            
+            palettes.append(pTemp[(p*8):(p*8)+8])        
+
+        offset = 0
+
+        for y in range(0, height, 2):
+            for x in range(0, width, 2):                
+                pixel = Image.frombytes("RGB", (2,2), palettes[min(struct.unpack("<H", dData[offset:offset+2])[0], size-1)], "raw", "BGR;16", 0, 1) 
+                temp.paste(pixel, (x,y))
+                offset += 2
+
+        return temp
+
     elif ctype == 0x7:
         temp = Image.new("RGB", (width, height))
                             
