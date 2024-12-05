@@ -24,9 +24,6 @@ while fd.tell() < sz:
 		break
 	type, foffs, fnoffs = struct.unpack("<LLL", fd.read(12))
 	ssz =  struct.unpack("<L", fd.read(4))[0]
-	if part == 2: #IM-U160K PDL tbl: part == 2 -> 0x2000 hash, may be skipped by flasher?
-		foffs += 0x2000
-		ssz -= 0x2000
 	fd.read(20)
 	b_info, ver_info = struct.unpack("<LL", fd.read(8))
 	sname_x = fd.read(48)
