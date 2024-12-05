@@ -3,6 +3,7 @@ import os
 import sys
 from io import BytesIO
 import SkyLZ
+import LZB
 
 blk_size = 512
 
@@ -36,22 +37,34 @@ while itm < items:
 	else:
 		fd.seek(toffs+offs)
 		data = fd.read(size)
-		if data[0:3] == b"FWS":
-			ext = "swf"
-		elif struct.unpack(">H", data[0:2])[0] & 0xFFFE == 0xFFF8:
-			ext = "aac"
-		elif struct.unpack(">H", data[0:2])[0] & 0xFFF0 == 0xFFF0:
-			ext = "mp3"
-		elif data[0:4] == b"MMMD":
-			ext = "mmf"
-		elif data[20:28] == b"ftyp3gp4":
-			data = data[16:]
-			ext = "3gp"
-		elif struct.unpack("<H", data[0:2])[0] == 4: #assume its SKY LZ
-			data = SkyLZ.decodeLZ(data)  
-			ext = "bin"
-		else:
-			ext = "bin"
-		open(f"{out_path}/{item_no}.{ext}", "wb").write(data)
+		if size != 0:
+			if data[0:3] == b"FWS":
+				ext = "swf"
+			elif struct.unpack(">H", data[0:2])[0] & 0xFFFE == 0xFFF8:
+				ext = "aac"
+			elif struct.unpack(">H", data[0:2])[0] & 0xFFF0 == 0xFFF0 or data[0:3] == b"ID3":
+				ext = "mp3"
+			elif data[0:4] == b"MMMD":
+				ext = "mmf"
+			elif data[0:4] == b"RIFF" and data[8:15] == b"WAVEfmt":
+				ext = "wav"
+			elif data[20:28] == b"ftyp3gp4":
+				data = data[16:]
+				ext = "3gp"
+			elif size >= 8 and struct.unpack("<H", data[0:2])[0] == 4: #assume its SKY LZ
+				try:
+					data = SkyLZ.decodeLZ(data)  
+					ext = "bin"
+				except Exception as e:
+					ext = "bin"
+			elif size >= 8 and struct.unpack("<H", data[4:6])[0] <= 16 and struct.unpack("<H", data[6:8])[0] <= 16: #assume its LZB
+				try:
+					data = LZB.DecompressLZB(data)  
+					ext = "bin"
+				except Exception as e:
+					ext = "bin"
+			else:
+				ext = "bin"
+			open(f"{out_path}/{item_no:05d}.{ext}", "wb").write(data)
 		itm += 1
 		
