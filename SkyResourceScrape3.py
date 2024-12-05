@@ -21,6 +21,10 @@ out_path = f"{folder_path}/Out"
 if not os.path.exists(out_path):
 	os.makedirs(out_path, exist_ok=True)
 
+size_data = struct.unpack("<L", fd.read(4))[0]
+fd.seek(offs) #seek again
+rsc_data = BytesIO(fd.read(size_data))
+
 size, unk1, unk2, items = struct.unpack("<LLLL", fd.read(16))
 tbl_items = BytesIO(fd.read(16*items))
 csv_is_open = False
@@ -34,8 +38,8 @@ while itm < items:
 		tbl_items.read(16)
 		itm += 2
 	else:
-		fd.seek(toffs+offs)
-		data = fd.read(size)
+		rsc_data.seek(toffs)
+		data = rsc_data.read(size)
 		if data[0:3] == b"FWS":
 			ext = "swf"
 		elif struct.unpack(">H", data[0:2])[0] & 0xFFFE == 0xFFF8:
