@@ -41,7 +41,7 @@ while itm < items:
 		rsc_data.seek(toffs)
 		data = rsc_data.read(size)
 		if size != 0:
-			if data[0:3] == b"FWS":
+			if data[0:3] == b"FWS" or data[0:3] == b"CWS" or data[0:3] == b"ZWS":
 				ext = "swf"
 			elif struct.unpack(">H", data[0:2])[0] & 0xFFFE == 0xFFF8:
 				ext = "aac"
@@ -54,6 +54,8 @@ while itm < items:
 			elif data[20:28] == b"ftyp3gp4":
 				data = data[16:]
 				ext = "3gp"
+			elif data[4:12] == b"ftypodcf":
+				ext = "dcf"
 			elif size >= 8 and struct.unpack("<H", data[0:2])[0] == 4: #assume its SKY LZ
 				try:
 					data = SkyLZ.decodeLZ(data)  
