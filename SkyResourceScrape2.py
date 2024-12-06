@@ -46,6 +46,12 @@ while itm < items:
 				ext = "mp3"
 			elif data[0:4] == b"MMMD":
 				ext = "mmf"
+			elif struct.unpack(">L", data[0:4])[0] == 0xFFD8FFE0:
+				ext = "jpg"
+			elif data[0:2] == b"BM":
+				ext = "bmp"
+			elif data[0:4] == b"\x89PNG":
+				ext = "png"
 			elif data[0:4] == b"RIFF" and data[8:15] == b"WAVEfmt":
 				ext = "wav"
 			elif data[20:28] == b"ftyp3gp4":
@@ -53,6 +59,8 @@ while itm < items:
 				ext = "3gp"
 			elif data[4:12] == b"ftypodcf":
 				ext = "dcf"
+			elif data[0:3] == b"KJJ":
+				ext = "kjj"
 			elif size >= 8 and struct.unpack("<H", data[0:2])[0] == 4: #assume its SKY LZ
 				try:
 					data = SkyLZ.decodeLZ(data)  
